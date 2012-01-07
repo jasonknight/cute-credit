@@ -4,11 +4,11 @@
 #
 #-------------------------------------------------
 
-QT       += core
+QT       += core sql
 
 QT       -= gui
 
-TARGET = ArtemaHybrid
+TARGET = cute-credit
 CONFIG   += console
 CONFIG   -= app_bundle
 
@@ -16,8 +16,20 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp \
-    artematimer.cpp
+    artematimer.cpp \
+    reader.cpp \
+    fifocontroller.cpp \
+    mock.cpp \
+    database.cpp \
+    artemahybrid.cpp
 
 HEADERS += \
     helpers.h \
-    artematimer.h
+    artematimer.h \
+    reader.h \
+    cute_credit.h \
+    fifocontroller.h \
+    mock.h \
+    database.h \
+    artemahybrid.h \
+    paylife_structs.h

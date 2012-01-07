@@ -1,0 +1,25 @@
+#define TESTING
+#include <stdio.h>
+#include <stdlib.h>
+#include <QDebug>
+#include <QTimer>
+#include <QMap>
+#include <QStringList>
+#include <QVariant>
+#include <QSqlQuery>
+#include <QSqlRecord>
+#ifdef Q_WS_X11
+    #define LINUX
+    #include <sys/stat.h>
+    #include <unistd.h>
+    #include <linux/stat.h>
+    #include <fcntl.h>
+    #include <termios.h>
+    #include <errno.h>
+    #include <sys/types.h>
+    #include <sys/time.h>
+#endif
+#include "helpers.h"
+#include "artematimer.h"
+#include "reader.h"
+#include "fifocontroller.h"
