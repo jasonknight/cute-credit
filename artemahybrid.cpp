@@ -13,7 +13,7 @@ ArtemaHybrid::ArtemaHybrid(QObject *parent, QString path) :
     this->m_queue = new QMap<int,QString>();
 }
 void ArtemaHybrid::run() {
-
+    qDebug() << "ArtemaHybrid::run";
     ArtemaTimer * Tpol = new ArtemaTimer(this,5000,"Tpol");               // 5 seconds
     ArtemaTimer * T0 = new ArtemaTimer(this,1000,"T0");                 // 1 second timeout
     ArtemaTimer * T1 = new ArtemaTimer(this,6000,"T1");                 // 6 seconds, repeat timer for send
@@ -21,7 +21,7 @@ void ArtemaHybrid::run() {
 
     this->m_Reader = new Reader(this,this->m_path,O_RDWR,true);
     this->m_Reader->configure("ArtemaHybrid");
-
+    qDebug() << "ArtemaHybrid::run: Reader configured";
     QString buffer;
 
     char ENQ = 0x05;
@@ -40,8 +40,10 @@ void ArtemaHybrid::run() {
     this->m_state = 0;
     this->m_ecr_ready = true;
     this->m_number = 0;
+    this->newState(0,"ONLINE");
 
     while (this->running) {
+        qDebug() << "Running";
         b = this->read();
         switch(this->m_state) {
             case 0:
@@ -224,7 +226,9 @@ void ArtemaHybrid::send(QString data) {
 }
 char ArtemaHybrid::read() {
     char b;
+    qDebug() << "Reading:";
     b = this->m_Reader->read_char();
+    qDebug() << "Read...";
     return b;
 }
 void ArtemaHybrid::send(char b) {

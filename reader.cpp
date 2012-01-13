@@ -76,6 +76,7 @@ bool Reader::write_char(char b) {
 }
 char Reader::read_char() {
     char buffer[1];
+    qDebug() << "Really reading..." << QString::number(this->m_descriptor);
     read(this->m_descriptor,buffer,1);
     return buffer[0];
 }

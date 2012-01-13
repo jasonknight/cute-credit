@@ -53,6 +53,22 @@ void export_database(int argc, char *argv[],Database * d) {
     QString query = "SELECT * FROM messages WHERE " + where + ";";
     qDebug() << query;
     QSqlQuery q = d->runQuery(query);
+    QStringList fields;
+    int i;
+    for (i=0; i< q.record().count(); i++)
+      fields.append(q.record().fieldName(i));
+    FILE * fp = fopen(QString(path + "/" + filename).toAscii().data(),"w+");
+    QStringList values;
+    while (q.next()) {
+        values.empty();
+        for (i = 0; i < fields.length();i++) {
+            int fieldNo = q.record().indexOf("country");
+            values.append(q.value(fieldNo).toString());
+        }
+        QString buffer = values.join(sep);
+        fwrite(buffer.toAscii().data(),1,buffer.length(),fp);
+    }
+    fclose(fp);
 
 }
 
