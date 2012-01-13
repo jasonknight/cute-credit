@@ -44,7 +44,7 @@ Database::Database(QObject *parent) :
 
 }
 Database::~Database() {
-
+    this->db.close();
 }
 void Database::runQuery(QString id, QString query) {
     qDebug() << "Database received: " << query;
@@ -55,4 +55,10 @@ void Database::runQuery(QString id, QString query) {
         qDebug() << "There was a query Error" << q.lastError().text();
         emit queryComplete(id,q.lastError().text());
     }
+}
+QSqlQuery Database::runQuery(QString query) {
+    qDebug() << "Database received Direct: " << query;
+    QSqlQuery q;
+    q.exec(query);
+    return q;
 }

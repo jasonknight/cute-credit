@@ -64,6 +64,8 @@ void FIFOController::run() {
                 }
                 settings.setValue(id,value);
                 this->success(id," set to " + value);
+            } else if (command == "GET") {
+                this->success(id,"value=" + settings.value(id).toString());
             }
         } else {
             qDebug() << "No match for " << str;
@@ -85,7 +87,7 @@ void FIFOController::queryComplete(QString id, QSqlQuery q) {
         int msg = q.record().indexOf("msg");
         int sent_at = q.record().indexOf("sent_at");
         while(q.next()) {
-            QString res = "RECV " + q.value(id_field).toString();
+            QString res = "RECV " + id + " " + q.value(id_field).toString();
             res += " " + q.value(sent_at).toString();
             res += " " + q.value(msg).toString() + "\n";
             this->w->write_string(res);

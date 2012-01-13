@@ -1,16 +1,63 @@
 #include <QtCore/QCoreApplication>
 #include <QSettings>
 #include <QProcess>
+#include <QSqlQuery>
 #include "helpers.h"
 #include "cute_credit.h"
 #include "mock.h"
 #include "artemahybrid.h"
 #include "database.h"
+void help() {
+    qDebug() << "Showing Help";
+}
+QString parse_arg(QString arg) {
+    int index = arg.indexOf("=")+1;
+    QString value;
+    while (index < arg.length()) {
+        //if (arg.at(index) != '"') {
+            value += arg.at(index);
+        //}
+        index++;
+    }
+    return value;
+}
+void export_database(int argc, char *argv[],Database * d) {
+    QString path = "/var/log";
+    QString filename = "cute_credit.tsv";
+    QString sep = "\t";
+    QString arg;
+    QString where = "1";
+    for (int i = 1; i < argc; i++) {
+      arg = QString(argv[i]);
+          if (arg.indexOf("--path") != -1) {
+            path = parse_arg(arg);
+          }
+          if (arg.indexOf("--filename") != -1) {
+            filename = parse_arg(arg);
+          }
+          if (arg.indexOf("--sep") != -1) {
+            sep = parse_arg(arg);
+            if (sep == "semicolon")
+                sep = ";";
+            if (sep == "colon")
+                sep = ":";
+            if (sep == "tab")
+                sep = "\t";
+            if (sep == "comma")
+                sep = ",";
+          }
+          if (arg.indexOf("--where") != -1) {
+            where = parse_arg(arg);
+          }
+    }
+    QString query = "SELECT * FROM messages WHERE " + where + ";";
+    qDebug() << query;
+    QSqlQuery q = d->runQuery(query);
+
+}
+
 int main(int argc, char *argv[])
 {
-    QString n = "N00A*hjkloijjjhghjklk1";
-    parse_n_struct(n);
-    return 0;
     QSettings settings("JolieRouge", "CuteCredit");
     QCoreApplication a(argc, argv);
     int pid = settings.value("pid").toInt();
@@ -25,6 +72,21 @@ int main(int argc, char *argv[])
 
     }
     settings.setValue("pid",m_pid);
+
+    // Now we need to handle cmdline arguments
+    Database * d = new Database(0); // we need the database at this point, in case we need to query
+    QString arg;
+    for (int i = 1; i < argc; i++) {
+      arg = QString(argv[i]);
+      if (arg == "-h") {
+        help();
+        return 0;
+      }
+      if (arg == "--export") {
+        export_database(argc, argv,d);
+        return 0;
+      }
+    }
     /*
         At this point we need to create two FIFO files, /tmp/CUTE_CREDIT_IN and /tmp/CUTE_CREDIT_OUT
         the _IN file is where other programs write to send data to the program, and the _OUT
@@ -41,7 +103,7 @@ int main(int argc, char *argv[])
     /*
         Now we need an object to sit and read from the FIFOS to direct the communication
     */
-    Database * d = new Database(0);
+
     FIFOController * f = new FIFOController(0);
     ArtemaHybrid * ah = new ArtemaHybrid(0,"/dev/ttyUSB0");
     // We connect the FIFO Controller to the Hybrid sendData

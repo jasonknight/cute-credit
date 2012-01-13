@@ -18,6 +18,7 @@ signals:
     void queryComplete(QString id, QSqlQuery q);
 public slots:
     void runQuery(QString id,QString query);
+    QSqlQuery runQuery(QString query);
 private:
     QSqlDatabase db;
 
