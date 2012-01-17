@@ -23,3 +23,4 @@
 #include "artematimer.h"
 #include "reader.h"
 #include "fifocontroller.h"
+#include "receipttemplate.h"

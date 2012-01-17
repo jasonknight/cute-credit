@@ -3,7 +3,7 @@ File.open("/tmp/CUTE_CREDIT_IN","w") do |f|
 end
 sleep(1)
 File.open("/tmp/CUTE_CREDIT_IN","w") do |f|
-  cmd = "PAY O1234#{rand(99)} 32,95"
+  cmd = "PAY O1234#{rand(99999999999)} 32,95"
   puts "Sending Command: " + cmd
   f.write cmd
 end

@@ -21,7 +21,8 @@ SOURCES += main.cpp \
     fifocontroller.cpp \
     mock.cpp \
     database.cpp \
-    artemahybrid.cpp
+    artemahybrid.cpp \
+    receipttemplate.cpp
 
 HEADERS += \
     helpers.h \
@@ -32,4 +33,8 @@ HEADERS += \
     mock.h \
     database.h \
     artemahybrid.h \
-    paylife_structs.h
+    paylife_structs.h \
+    receipttemplate.h
+
+RESOURCES += \
+    cute-credit-resources.qrc

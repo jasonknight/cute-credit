@@ -10,6 +10,10 @@
 #include <signal.h>
 #include <QStringList>
 #include <QDebug>
+
+
+
+
 static char encodeParity(char b);
     #ifdef LINUX
 
@@ -91,6 +95,7 @@ static char encodeParity(char b) {
 }
 static void update_daily_totals(QString index, qreal total) {
     QSettings settings("JolieRouge", "CuteCredit");
+    qDebug() << "Received: " << index << " + " << QString::number(total);
     qreal current_total = settings.value(index).toReal();
     settings.setValue(index,current_total + total);
 
@@ -261,6 +266,24 @@ static void parse_n_struct(QString n) {
     qDebug() << "ind_error: " << ind_error;
     qDebug() << "n_text: " << n_text;
 }
+static QString update_query(QString field, QString value, QString id, QString sa) {
+    QString query = "UPDATE messages SET FIELD = VALUE WHERE ref_id = 'REFID' AND sa = 'IND';";
+    query = query.replace("FIELD",field);
+    value = value.replace("'","&squo;");
+    query = query.replace("VALUE","'"+value+"'");
+    query = query.replace("REFID",id);
+    query = query.replace("IND",sa);
+    qDebug() << query;
+    return query;
+}
+static QString update_query(QString field, int value, QString id, QString sa) {
+    QString query = "UPDATE messages SET FIELD = VALUE WHERE ref_id = 'REFID' AND sa = 'IND';";
+    query = query.replace("FIELD",field);
+    query = query.replace("VALUE",QString::number(value));
+    query = query.replace("REFID",id);
+    query = query.replace("IND",sa);
+    return query;
+}
 static QString update_query(QString field, QString value, QString id) {
     QString query = "UPDATE messages SET FIELD = VALUE WHERE ref_id = 'REFID';";
     query = query.replace("FIELD",field);
@@ -313,11 +336,43 @@ static QString toNumber(QString s) {
     if (nums.indexOf(last) != -1 && allowed.indexOf(s2l) != -1) {
         new_s += "0";
     }
-    return new_s;
+    return new_s.replace(",",".");
 }
 static QString cents2float(QString cents) {
     qreal t = cents.toFloat() / 100;
     return QString::number(t);
 }
-
+static QStringList split_lines_at_space(QString line, int max_chars) {
+  QStringList lines;
+  // Verify that the line is longer than max_chars.
+  if (line.length() < max_chars) {
+    lines.append(line);
+    return lines;
+  }
+  int head = max_chars;
+  QString c_line;
+  QString new_line;
+  int i;
+  while (head > 0) {
+   if (line.at(head) == ' ') {
+      // yay, we've found the split point.
+      for (i = 0; i < head+1; i++) {
+        c_line += line.at(i);
+      }
+      qDebug() << "Appending: " << c_line;
+      lines.append(c_line);
+      for (i = head; i < line.length(); i++) {
+        new_line += line.at(i);
+      }
+      if (new_line.length() > 0 ) {
+        lines.append(split_lines_at_space(new_line,max_chars));
+      }
+      return lines;
+   }
+   head--;
+  }
+  qDebug() << "Failed to split lines.";
+  lines.append(line);
+  return lines;
+}
 #endif // HELPERS_H

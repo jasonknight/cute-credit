@@ -21,6 +21,7 @@ Database::Database(QObject *parent) :
     sql +=       "msg TEXT, ";
     sql +=       "sent_at INTEGER, ";
     sql +=       "ind VARCHAR(255),";
+    sql +=       "sa VARCHAR ( 255 ),";
     sql +=       "name VARCHAR(255), ";
     sql +=       "card VARCHAR(255), " ;
     sql +=       "expiry_date VARCHAR(255), ";
@@ -35,6 +36,9 @@ Database::Database(QObject *parent) :
     sql +=       "customer_display_text TEXT, ";
     sql +=       "user_display_text TEXT, ";
     sql +=       "signature_required VARCHAR(5), ";
+    sql +=       "cash_record TEXT, ";
+    sql +=       "credit_card_receipt TEXT, ";
+    sql +=       "printed VARCHAR(1), ";
     sql +=       "receipt_text TEXT );";
     if (!q.exec(sql)) {
         qDebug() << "Creat Table Statement invalid!" << q.lastError().text();

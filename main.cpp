@@ -2,6 +2,8 @@
 #include <QSettings>
 #include <QProcess>
 #include <QSqlQuery>
+#include <QFile>
+#include <QTextStream>
 #include "helpers.h"
 #include "cute_credit.h"
 #include "mock.h"
@@ -57,8 +59,11 @@ void export_database(int argc, char *argv[],Database * d) {
     int i;
     for (i=0; i< q.record().count(); i++)
       fields.append(q.record().fieldName(i));
-    FILE * fp = fopen(QString(path + "/" + filename).toAscii().data(),"w+");
+    QFile fp(path + "/" + filename);
+    fp.open(QIODevice::WriteOnly | QIODevice::Text);
+    QTextStream out(&fp);
     QStringList values;
+    out << fields.join(sep) + "\n";
     while (q.next()) {
         values.empty();
         for (i = 0; i < fields.length();i++) {
@@ -66,9 +71,10 @@ void export_database(int argc, char *argv[],Database * d) {
             values.append(q.value(fieldNo).toString());
         }
         QString buffer = values.join(sep);
-        fwrite(buffer.toAscii().data(),1,buffer.length(),fp);
+        buffer += "\n";
+        out << buffer;
     }
-    fclose(fp);
+    fp.close();
 
 }
 
@@ -119,11 +125,18 @@ int main(int argc, char *argv[])
     /*
         Now we need an object to sit and read from the FIFOS to direct the communication
     */
-
     FIFOController * f = new FIFOController(0);
-    ArtemaHybrid * ah = new ArtemaHybrid(0,"/dev/ttyUSB0");
+    QString path;
+    if (QFile::exists("/dev/ttyUSB0")) {
+      path = "/dev/ttyUSB0";
+      } else {
+        path = "/dev/ttyUSB1";
+      }
+    ArtemaHybrid * ah = new ArtemaHybrid(0,path);
     // We connect the FIFO Controller to the Hybrid sendData
     ah->connect(f,SIGNAL(send(QString,QString)),SLOT(sendData(QString,QString)));
+    ah->connect(f,SIGNAL(eod(QString)),SLOT(eod(QString)));
+    ah->connect(f,SIGNAL(eoc(QString,QString)),SLOT(eoc(QString,QString)));
     // we connect the database to the saveMessage
     d->connect(ah,SIGNAL(saveMessage(QString,QString)),SLOT(runQuery(QString,QString)));
     // we connect the fifo controller to the artema hybrid machine...Eventually this will
@@ -136,6 +149,7 @@ int main(int argc, char *argv[])
     f->connect(ah,SIGNAL(success(QString,QString)),SLOT(success(QString,QString)));
     f->connect(ah,SIGNAL(error(QString,QString)),SLOT(error(QString,QString)));
     f->connect(ah,SIGNAL(notify(QString,QString)),SLOT(notify(QString,QString)));
+    f->connect(ah,SIGNAL(wait_(QString, int)),SLOT(wait(QString,int)));
     // we connect the database to the Fifo
     f->connect(d,SIGNAL(queryComplete(QString,QSqlQuery)), SLOT(queryComplete(QString, QSqlQuery)));
     d->connect(f,SIGNAL(runQuery(QString,QString)),SLOT(runQuery(QString,QString)));

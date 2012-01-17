@@ -3,6 +3,8 @@
 #include "reader.h"
 #include "cute_credit.h"
 #include <QSettings>
+#include <QFile>
+#include <QTextStream>
 FIFOController::FIFOController(QObject *parent) :
     QThread(parent)
 {
@@ -66,6 +68,10 @@ void FIFOController::run() {
                 this->success(id," set to " + value);
             } else if (command == "GET") {
                 this->success(id,"value=" + settings.value(id).toString());
+            }  else if (command == "EOD") {
+                emit eod(id);
+            }  else if (command == "EOC") {
+                emit eoc(id,data);
             }
         } else {
             qDebug() << "No match for " << str;
@@ -100,7 +106,14 @@ void FIFOController::display(QString id, QString data) {
     this->writeData("DISP " + id + " " + data + 0x04);
 }
 void FIFOController::print(QString id, QString data) {
-    this->writeData("PRINT " + id + " " + data + 0x04);
+    //this->writeData("PRINT " + id + " " + data + 0x04);
+    QSettings s("JolieRouge","CuteCredit");
+    QFile f(s.value("printer").toString());
+    if (f.exists() && f.open(QIODevice::Append)) {
+        QTextStream out(&f);
+        out << data;
+        f.close();
+    }
 }
 void FIFOController::paid(QString id, QString amount) {
     this->writeData("PAID " + id + " " + amount + 0x04);
@@ -111,8 +124,8 @@ void FIFOController::success(QString id, QString data) {
 void FIFOController::fail(QString id, QString data) {
     this->writeData("FAIL " + id + " " + data + 0x04);
 }
-void FIFOController::wait(QString id) {
-    this->writeData("WAIT " + id + 0x04);
+void FIFOController::wait(QString id, int seconds) {
+    this->writeData("WAIT " + id + " " + QString::number(seconds) + 0x04);
 }
 void FIFOController::error(QString id, QString data) {
     this->writeData("ERROR " + id + " " + data + 0x04);

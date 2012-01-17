@@ -21,6 +21,8 @@ signals:
     void send(QString,QString);
     void dataWritten();
     void runQuery(QString id, QString query);
+    void eod(QString);
+    void eoc(QString, QString); // eod for credit cards only
 
 public slots:
     void recvMsg(QString id, QString data);
@@ -30,7 +32,7 @@ public slots:
     void print(QString id,QString data);
     void paid(QString id,QString data);
     void fail(QString id, QString data);
-    void wait(QString id);
+    void wait(QString id, int seconds);
     void success(QString id, QString data);
     void error(QString id, QString data);
     void notify(QString id, QString data);
