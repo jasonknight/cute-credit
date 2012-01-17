@@ -6,6 +6,7 @@
 #include <QDateTime>
 #include <QSettings>
 #include <QCryptographicHash>
+
 //#define FAIL_TRANSACTIONS // i.e. put this is error testing mode.
 ArtemaHybrid::ArtemaHybrid(QObject *parent, QString path) :
     QThread(parent)
@@ -23,13 +24,13 @@ ArtemaHybrid::ArtemaHybrid(QObject *parent, QString path) :
 }
 void ArtemaHybrid::run() {
     qDebug() << "ArtemaHybrid::run";
-    ArtemaTimer * Tpol = new ArtemaTimer(this,6,"Tpol");               // 5 seconds
-    ArtemaTimer * T0 = new ArtemaTimer(this,2,"T0");                 // 1 second timeout
-    ArtemaTimer * T1 = new ArtemaTimer(this,7,"T1");                 // 6 seconds, repeat timer for send
-    ArtemaTimer * T2 = new ArtemaTimer(this,7,"T2");                 // 6 seconds, repeat timer for receive
-    this->JStruct = new ArtemaTimer(this,6,"JStruct");                 // 6 seconds, repeat timer for receive
-    this->StartUpTimer = new ArtemaTimer(this,10,"StartUpTimer"); // 6 seconds, repeat timer for receive\
-    this->EOCTimer = new ArtemaTimer(this,60,"EOCTimer");
+    ArtemaTimer * Tpol = new ArtemaTimer(this,5550,"Tpol");               // 5 seconds
+    ArtemaTimer * T0 = new ArtemaTimer(this,1790,"T0");                 // 1 second timeout
+    ArtemaTimer * T1 = new ArtemaTimer(this,6100,"T1");                 // 6 seconds, repeat timer for send
+    ArtemaTimer * T2 = new ArtemaTimer(this,6100,"T2");                 // 6 seconds, repeat timer for receive
+    this->JStruct = new ArtemaTimer(this,6100,"JStruct");                 // 6 seconds, repeat timer for receive
+    this->StartUpTimer = new ArtemaTimer(this,10000,"StartUpTimer"); // 6 seconds, repeat timer for receive\
+    this->EOCTimer = new ArtemaTimer(this,60000,"EOCTimer");
 #ifdef FAIL_TRANSACTIONS
     qDebug() << "FAIL_TRANSACTIONS";
      ArtemaTimer * ft = new ArtemaTimer(this,3,"FailTimer");
@@ -39,12 +40,12 @@ void ArtemaHybrid::run() {
     this->m_Reader->configure("ArtemaHybrid");
     qDebug() << "ArtemaHybrid::run: Reader configured";
     QString buffer;
-
     char ENQ = 0x05;
     char STX = 0x02;
     char ETX = 0x03;
     char ACK = 0x06;
     char NAK = 0x15;
+
     char b;
     bool parity_flag = false;
     int w = -1;
@@ -76,16 +77,18 @@ void ArtemaHybrid::run() {
         }
 #endif
         b = this->read();
+        //this->log("State: " + QString::number(this->m_state) + "\n");
+        //this->log(b);
         switch(this->m_state) {
             case 0:
                 if (bmask(b) == ENQ && checkParity(b)) {
                     this->newState(1,"ONLINE");
+                    Tpol->restart();
                 } else if (Tpol->timeOut()) {
-
                     this->newState(0,"OFFLINE");
                     emit pollingTimeOut();
+                    Tpol->restart();
                 }
-                Tpol->restart();
                 break;
            case 1:
                 if (this->m_ready && this->m_data_to_send != "") {
@@ -107,7 +110,7 @@ void ArtemaHybrid::run() {
                 } else if (bmask(b) == ENQ && checkParity(b)) {
                     this->m_ready = true;
                     Tpol->restart();
-                    this->m_state = 1;
+                    this->newState(1,"ONLINE");
                 } else if (bmask(b) == STX && checkParity(b)) {
                     parity_flag = true;
                     buffer = "";
@@ -125,6 +128,8 @@ void ArtemaHybrid::run() {
                 } else {
                     this->newState(0,"OFFLINE");
                     this->m_data_to_send = "";
+                    this->m_Reader->flush();
+                    emit error(this->m_active_id,"ProtocolOffline");
                 }
                 break;
              case 4:
@@ -133,22 +138,31 @@ void ArtemaHybrid::run() {
                     this->newState(3,"ONLINE");
                 } else if (bmask(b) == ACK && checkParity(b)) {
                       this->newState(0,"ONLINE");
-
                       emit dataSent(this->m_data_to_send);
                       this->m_data_to_send = "";
+                      emit success(this->m_active_id,"DataAck");
                 } else if (T1->timeOut()) {
                     emit sendTimeOut();
                     this->newState(0,"OFFLINE");
+                    this->m_data_to_send = "";
+                    this->m_Reader->flush();
+                    emit error(this->m_active_id,"ProtocolOffline");
                 }
                 break;
              case 5:
+                if (b != NULL) {
+                    qDebug() << "b: " << QString::number(bmask(b));
+                    qDebug() << "b: " << checkParity(b);
+                }
                 if (T0->timeOut()) {
+                    qDebug() << "T0 is timed out...";
                     this->newState(0,this->m_terminal_state);
                     emit receiveTimeOut();
                 } else if (bmask(b) == ETX && checkParity(b)) {
+                    qDebug() << "Restarting T0";
                     T0->restart();
                     this->newState(6,"ONLINE");
-                } else if (b != NULL) {
+                } else if (this->m_Reader->has_read) {
                     if (!checkParity(b)) {
                         parity_flag = false;
                     }
@@ -157,20 +171,21 @@ void ArtemaHybrid::run() {
                 }
                 break;
             case 6:
+
                 if (T0->timeOut()) {
                     this->newState(0,this->m_terminal_state);
                     emit receiveTimeOut();
-                } else if (b != NULL) {
+                } else if (this->m_Reader->has_read) {
+                    qDebug() << "";
                     // We need to fix checkParity and checkLRC becuase they just aren't working when they should...
                     if (checkParity(b) && checkLRC(bmask(b),calculateLRC(buffer)) && parity_flag) {
                         this->send(ACK);
                         this->newState(0,"ONLINE");
                         qDebug() << "Emitting bufferComplete";
-
                         this->handleBuffer(buffer);
                         buffer = "";
                     } else {
-                        qDebug() << "This is failing...";
+                        this->send(NAK);
                         T2->restart();
                         this->newState(7, "ONLINE");
                     }
@@ -195,6 +210,9 @@ void ArtemaHybrid::run() {
 }
 void ArtemaHybrid::handleBuffer(QString buffer) {
     qDebug() << "handleBuffer() " << buffer ;
+    if (buffer.length() < 1) {
+        return;
+    }
     if (buffer.at(0) == 'V') {
         return;
     }
@@ -1001,4 +1019,46 @@ void ArtemaHybrid::ArtemaHybrid::test_suite() {
     sleep(1);
     this->test_u_struct();
 
+}
+void ArtemaHybrid::log(char b) {
+    QFile f("/var/log/paylife.log");
+    QString c;
+    switch(bmask(b)) {
+        case 0x05: {
+             c = "ENQ";
+             break;
+        }
+        case 0x15: {
+             c = "NAK";
+             break;
+        }
+        case 0x03: {
+            c = "ETX";
+            break;
+        }
+        case 0x02: {
+            c = "STX";
+            break;
+        }
+        case NULL: {
+           return;
+            break;
+        }
+        default:
+            c += b;
+            break;
+    }
+    if (f.open(QIODevice::Append)) {
+        QTextStream out(&f);
+        out << "Read Byte is: '" << QString::number(bmask(b)) << "'\n";
+        f.close();
+    }
+}
+void ArtemaHybrid::log(QString s) {
+    QFile f("/var/log/paylife.log");
+    if (f.open(QIODevice::Append)) {
+        QTextStream out(&f);
+        out << s;
+        f.close();
+    }
 }

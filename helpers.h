@@ -10,8 +10,7 @@
 #include <signal.h>
 #include <QStringList>
 #include <QDebug>
-
-
+#include <math.h>
 
 
 static char encodeParity(char b);
@@ -35,9 +34,10 @@ static void configureArtemaHybridPort(int fd) {
     //printf("c_cflag = %X \n", options.c_cflag);
     options.c_cflag &= ~CSIZE;
     //printf("c_cflag = %X \n", options.c_cflag);
-    options.c_cflag |= ( CLOCAL | CREAD | CS7 | PARENB ); // Enable the receiver and set local mode...  | CS7 | PARENB
+    options.c_cflag |= ( CLOCAL | CREAD | CS8 ); // Enable the receiver and set local mode...  | CS7 | PARENB
     //printf("c_cflag = %X \n", options.c_cflag);
     tcsetattr(fd, TCSANOW, &options); // Set the new options for the port...
+
 }
 static void configureFIFO(int fd) {
     fd_set set;
@@ -53,41 +53,44 @@ static void configureFIFO(int fd) {
 }
     #endif
 // Non Linux Specific Functions
-static char bmask(const char b){
-    return (b & 0b01111111);
+static char bmask(char b){
+    char c = b;
+    //qDebug() << QString::number(b);
+    c &= 0b01111111;
+    //qDebug() << QString::number(b);
+    return c;
 }
 static char calculateLRC(QString s) {
-    char * bytes;
+    qDebug() << "Calculating LRC";
+    QByteArray ba = s.toAscii();
     char lrc;
-    int len = s.length();
-    bytes = (char *) malloc(sizeof(char) * s.length() + 1);
-    sprintf(bytes,"%s%c",s.toLatin1().data(),0x03);
-
     int i = 0;
-    while (i < len + 1) {
-        lrc ^= encodeParity(bytes[i]);
+    while (i < ba.size()) {
+        lrc ^= ba.at(i);
         i++;
     }
+    lrc ^= 0x03;
     return lrc;
 }
 static bool checkLRC(char lrc1,char lrc2) {
     // needs to be fixed...
-    return true;
+    qDebug() << "checkLrc: " << (lrc1 == lrc2);
     return (lrc1 == lrc2);
 }
 static bool checkParity(char b) {
-    return true;
-    bool parity = false;  // parity will be the parity of v
-
-    while (b)
-    {
-      parity = !parity;
-      b = b & (b - 1);
+    int nob = 8;
+    int i;
+    int counter = 0;
+    char bb = 1;
+    for (i = 0; i < nob; i++) {
+        if (b & bb) {
+            counter++;
+        }
+        bb = bb << 1;
     }
-    return !parity;
+    return (counter % 2 == 0);
 }
 static char encodeParity(char b) {
-    return b;
     if (!checkParity(b)) {
         b |= 0b10000000;
     }

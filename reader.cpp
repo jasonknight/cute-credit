@@ -1,5 +1,6 @@
 #include "reader.h"
 #include "cute_credit.h"
+
 Reader::Reader(QObject *parent, QString path, int mode, bool keepalive) :
     QObject(parent)
 {
@@ -10,6 +11,7 @@ Reader::Reader(QObject *parent, QString path, int mode, bool keepalive) :
         this->m_descriptor = openPort(path,mode);
         qDebug() << path << " opened descriptor is: " << QString::number(this->m_descriptor);
     }
+    this->has_read = false;
 }
 QString Reader::read_string(int len) {
     if (!this->m_keepalive) {
@@ -76,8 +78,32 @@ bool Reader::write_char(char b) {
 }
 char Reader::read_char() {
     char buffer[1];
-
-    read(this->m_descriptor,buffer,1);
+    //read(this->m_descriptor,buffer,1);
+    //return buffer[0];
+    if (this->m_keepalive) {
+        fd_set f;
+        FD_ZERO(&f);
+        FD_SET(this->m_descriptor,&f);
+        struct timeval tv;
+        tv.tv_sec = 0;
+        tv.tv_usec = 100;
+        int i = select(this->m_descriptor + 1, &f,NULL,NULL,&tv);
+        if (i>0) {
+            if (FD_ISSET(this->m_descriptor,&f)) {
+                read(this->m_descriptor,buffer,1);
+                this->has_read = true;
+            } else {
+                this->has_read = false;
+                return NULL;
+            }
+        } else {
+            this->has_read = false;
+            return NULL;
+        }
+    } else {
+        read(this->m_descriptor,buffer,1);
+        this->has_read = true;
+    }
     return buffer[0];
 }
 void Reader::configure(QString type) {

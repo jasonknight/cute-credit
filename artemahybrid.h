@@ -4,6 +4,8 @@
 #include <QThread>
 #include <QCryptographicHash>
 #include "cute_credit.h"
+#include <QFile>
+#include <QTextStream>
 // See bottom of file for testing methods
 class ArtemaHybrid : public QThread
 {
@@ -16,6 +18,9 @@ public:
     QString t_kauf;
     QString t_storno;
     QString t_gutschr;
+
+    void log(char b);
+    void log(QString s);
 private:
     // member variables
     int m_state;

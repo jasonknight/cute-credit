@@ -31,10 +31,7 @@ void ArtemaTimer::_timeOut() {
 }
 int ArtemaTimer::timeRemaining() {
     QDateTime now = QDateTime::currentDateTime();
-    int now_t = now.toTime_t();
-    int diff = now_t - this->p_start_time;
-    qDebug() << QString::number(now_t) << "," << QString::number(this->p_start_time) << "," << QString::number(this->p_interval) << "," << QString::number(diff);
-
+    int diff = now.msecsTo(QDateTime::fromTime_t(this->p_start_time)) * -1;
     if (this->p_interval - diff < 0)
         this->_timeOut();
     return this->p_interval - diff;
@@ -42,14 +39,14 @@ int ArtemaTimer::timeRemaining() {
 void ArtemaTimer::kill() {
     this->p_running = false;
     this->p_timeout = true;
+
     emit timedOut();
 }
 bool ArtemaTimer::timeOut() {
     if (this->p_timeout)
         return true;
     QDateTime now = QDateTime::currentDateTime();
-    int now_t = now.toTime_t();
-    int diff = now_t - this->p_start_time;
+    int diff = now.msecsTo(QDateTime::fromTime_t(this->p_start_time)) * -1;
     if (this->m_name == "FailTimer") {
         //qDebug() << "Difference: " << QString::number(diff) << " for " << this->m_name;
     }

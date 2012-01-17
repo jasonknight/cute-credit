@@ -3,6 +3,8 @@
 
 #include <QObject>
 #include "cute_credit.h"
+#include <termios.h>
+#include <sys/ioctl.h>
 class Reader : public QObject
 {
     Q_OBJECT
@@ -11,6 +13,11 @@ public:
     QString m_path;
     bool m_keepalive;
     int m_mode;
+    fd_set * fds;
+    bool has_read;
+    void flush() {
+        ioctl( this->m_descriptor, TCFLSH, 2 );
+    }
 #ifdef LINUX
     int m_descriptor;
 #endif
